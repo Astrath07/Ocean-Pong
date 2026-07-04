@@ -1,7 +1,13 @@
+# Executables
 *.exe
+
+# Object files
 *.o
 *.obj
 
+# VS Code
 .vscode/
+
+# Build folders
 build/
 bin/
