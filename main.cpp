@@ -8,6 +8,7 @@ enum class GameState
         Menu,
         Serve,
         Playing,
+        Paused,
         GameOver
     };
 enum class GameMode
@@ -65,6 +66,8 @@ int main()
     right_paddle.setFillColor(sf::Color::Black);
 
     sf::RectangleShape dash;
+
+    sf::RectangleShape PausedOverlay;
 
     sf::CircleShape ball;
     ball.setFillColor(sf::Color::White);
@@ -131,15 +134,29 @@ int main()
     PlayAgain.setString("Play Again");
     MenuText.setString("Menu");
     WinnerText.setFillColor(sf::Color(0,255,255));
-    WinnerText.setCharacterSize(Pong.getCharacterSize()/2);
+    WinnerText.setCharacterSize(Pong.getCharacterSize()/1.5);
     PlayAgain.setCharacterSize(Pong.getCharacterSize()*2/3);
     MenuText.setCharacterSize(Pong.getCharacterSize()*2/3);
     PlayAgain.setPosition({(WindowWidth-PlayAgain.getLocalBounds().size.x)/2,WindowHeight*6/14});
     MenuText.setPosition({(WindowWidth-MenuText.getLocalBounds().size.x)/2,WindowHeight*9/14});
-    
+    sf::Text PausedText(font);
+    sf::Text Resume(font);
+    sf::Text Restart(font);
+    PausedText.setCharacterSize(Pong.getCharacterSize()*2/3);
+    Resume.setCharacterSize(Pong.getCharacterSize()*2/3);
+    Restart.setCharacterSize(Pong.getCharacterSize()*2/3);
+     PausedText.setString("Paused");
+    Resume.setString("Resume");
+    Restart.setString("Restart");
+    PausedText.setFillColor(sf::Color(0,255,255));
+    PausedText.setPosition({(WindowWidth-PausedText.getLocalBounds().size.x)/2,WindowHeight*1/14});
+    Resume.setPosition({(WindowWidth-Resume.getLocalBounds().size.x)/2,WindowHeight*3/11.f});
+    Restart.setPosition({(WindowWidth-Restart.getLocalBounds().size.x)/2,WindowHeight*6/13}); 
     dash.setSize({PaddleHalfWidth,PaddleHalfHeight/2});
     dash.setOrigin({PaddleHalfWidth/2,PaddleHalfHeight/4});
-    dash.setFillColor(sf::Color(220,220,220));
+    dash.setFillColor(sf::Color(220,220,220,80));
+    PausedOverlay.setSize({WindowWidth,WindowHeight});
+    PausedOverlay.setFillColor(sf::Color(0,80,80,80));
 
     sf::Clock clock;
     sf::Clock rest;
@@ -181,6 +198,31 @@ int main()
                         }
                         break;
                     }
+                    case GameState::Paused:
+                    {
+                        if(Resume.getGlobalBounds().contains(mousePos))
+                        {
+                            currentState = GameState::Playing;
+                        }
+                        if(Restart.getGlobalBounds().contains(mousePos))
+                        {
+                            serveBall(left_paddle,right_paddle,ball,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
+                            rest.restart();
+                            leftScore=0;rightScore=0;
+                            currentState=GameState::Serve;
+                        }
+                        if(MenuText.getGlobalBounds().contains(mousePos))
+                        {
+                            ball.setPosition({WindowWidth/2,WindowHeight/2});
+                            leftScore=0;rightScore=0;
+                            currentState = GameState::Menu;
+                        }
+                        if(exitText.getGlobalBounds().contains(mousePos))
+                        {
+                            window.close();
+                        }
+                        break;
+                    }
                     case GameState::GameOver:
                     {
                         if(PlayAgain.getGlobalBounds().contains(mousePos))
@@ -192,7 +234,6 @@ int main()
                         } 
                         else if(MenuText.getGlobalBounds().contains(mousePos))
                         {
-                            leftScore = 0; rightScore=0;
                             currentState = GameState::Menu;
                         }
                         else if(exitText.getGlobalBounds().contains(mousePos))
@@ -262,6 +303,10 @@ int main()
             //Playing
             case GameState::Playing:
             {
+                if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
+                {
+                    currentState = GameState::Paused;
+                }
                 if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))//inpute detection
                 {
                     if(left_paddle.getPosition().y>PaddleHalfHeight)
@@ -398,17 +443,60 @@ int main()
                 if(leftScore >=7 || rightScore >= 7)
                 {
                     if(leftScore>=7)
-                {
-                    WinnerText.setString("Left Wins!!");
-                }
-                else
-                {
-                    WinnerText.setString("Right Wins!!");
-                }
+                    {
+                        WinnerText.setString("Left Wins!!");
+                    }
+                    else
+                    {
+                        WinnerText.setString("Right Wins!!");
+                    }
                     currentState = GameState::GameOver;
                 }
                 break;
-            }    
+            }   
+            case GameState::Paused:
+            {
+                Resume.setFillColor(sf::Color::White);
+                Restart.setFillColor(sf::Color::White);
+                MenuText.setFillColor(sf::Color::White);
+                exitText.setFillColor(sf::Color::White);
+                Resume.setOutlineThickness(0);
+                Restart.setOutlineThickness(0);
+                MenuText.setOutlineThickness(0);
+                exitText.setOutlineThickness(0);
+                if(Resume.getGlobalBounds().contains(mousePos))
+                {
+                    Resume.setFillColor(sf::Color::Yellow);
+                    Resume.setOutlineThickness(5);
+                }
+                if(Restart.getGlobalBounds().contains(mousePos))
+                {
+                    Restart.setFillColor(sf::Color::Yellow);
+                    Restart.setOutlineThickness(5);
+                }
+                if(MenuText.getGlobalBounds().contains(mousePos))
+                {
+                    MenuText.setFillColor(sf::Color::Yellow);
+                    MenuText.setOutlineThickness(5);
+                }
+                if(exitText.getGlobalBounds().contains(mousePos))
+                {
+                    exitText.setFillColor(sf::Color::Yellow);
+                    exitText.setOutlineThickness(5);
+                }
+                window.draw(PausedOverlay);
+                window.draw(PausedText);
+                window.draw(Resume);
+                window.draw(Restart);
+                window.draw(MenuText);
+                window.draw(exitText);
+                window.draw(right_paddle);
+                window.draw(left_paddle);
+                window.draw(ball);
+                centerline(dash,WindowHeight,window,WindowWidth);
+                window.display();
+                break;
+            } 
             case GameState::GameOver:
             {
                 PlayAgain.setFillColor(sf::Color::White);
