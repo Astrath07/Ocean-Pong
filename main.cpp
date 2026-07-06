@@ -3,6 +3,7 @@
 #include <random>
 #include <optional>
 #include <string>
+#include <SFML/Audio.hpp>
 enum class GameState
     {
         Menu,
@@ -96,6 +97,93 @@ int main()
     std::uniform_int_distribution<int> flip(0,1);
     std::uniform_real_distribution<float> rightserve(-60.f,60.f);
     std::uniform_real_distribution<float> leftserve(120.f,240.f);
+    std::uniform_int_distribution<int> lose(0,1);
+    bool wasHoveringOnePlayer = false;
+    bool wasHoveringTwoPlayer = false;
+    bool wasHoveringExit = false;
+
+    bool wasHoveringResume = false;
+    bool wasHoveringRestart = false;
+    bool wasHoveringMenu = false;
+    bool wasHoveringPlayAgain = false;
+    
+    sf::SoundBuffer paddlebuffer;
+    sf::SoundBuffer wallbuffer;
+    sf::SoundBuffer clickbuffer;
+    sf::SoundBuffer hoverbuffer;
+    sf::SoundBuffer lostbuffer;
+    sf::SoundBuffer scoringbuffer;
+    sf::SoundBuffer startbuffer;
+    sf::SoundBuffer winbuffer;
+    if(!paddlebuffer.loadFromFile("assets/Sound Effects/ball and paddle.wav"))
+    {
+        std::cout << "Failed to load paddle sound\n";
+    }
+    if(!wallbuffer.loadFromFile("assets/Sound Effects/ball and wall.wav"))
+    {
+        std::cout << "Failed to load wall sound\n";
+    }
+    if(!clickbuffer.loadFromFile("assets/Sound Effects/click.wav"))
+    {
+        std::cout << "Failed to load click sound\n";
+    }
+    if(!hoverbuffer.loadFromFile("assets/Sound Effects/hover.wav"))
+    {
+        std::cout << "Failed to load hover sound\n";
+    }
+    if(!lostbuffer.loadFromFile("assets/Sound Effects/lost.wav"))
+    {
+        std::cout << "Failed to load lost1 sound\n";
+    }
+    if(!scoringbuffer.loadFromFile("assets/Sound Effects/scoring.wav"))
+    {
+        std::cout << "Failed to load scoring sound\n";
+    }
+    if(!startbuffer.loadFromFile("assets/Sound Effects/start click.flac"))
+    {
+        std::cout << "Failed to start paddle sound\n";
+    }
+    if(!winbuffer.loadFromFile("assets/Sound Effects/win.wav"))
+    {
+        std::cout << "Failed to load win sound\n";
+    }
+    sf::Sound paddlesound(paddlebuffer);
+    sf::Sound wallsound(wallbuffer);
+    sf::Sound clicksound(clickbuffer);
+    sf::Sound hoversound(hoverbuffer);
+    sf::Sound lost1sound(lostbuffer);
+    sf::Sound scoringsound(scoringbuffer);
+    sf::Sound startsound(startbuffer);
+    sf::Sound winsound(winbuffer);
+    hoversound.setVolume(150);
+    clicksound.setVolume(35);
+    wallsound.setVolume(25);
+    paddlesound.setVolume(60);
+    scoringsound.setVolume(55);
+    startsound.setVolume(60);
+    winsound.setVolume(200);
+    lost1sound.setVolume(80);
+    sf::Music menuMusic;
+    sf::Music gameplayMusic;
+    if(!menuMusic.openFromFile("assets/Music/menumusic.mp3"))
+    {
+        std::cout << "Failed to load Menu Music";
+    }
+    if(!gameplayMusic.openFromFile("assets/Music/gamemusic.mp3"))
+    {
+        std::cout << "Failed to load Game Music";
+    }
+    menuMusic.setLooping(true);
+    gameplayMusic.setLooping(true);
+    float menuVolume = 40.f;
+    float gameVolume = 0.f;
+    float pauseVolume = 20.f;
+    menuMusic.setVolume(menuVolume);
+    gameplayMusic.setVolume(gameVolume);
+    menuMusic.play();
+    bool fadetoGame = false;
+    bool fadetoMenu = false;
+
     sf::Font font;
     if(!font.openFromFile("assets/Font/PixeloidSans-Bold.ttf"))
     {
@@ -116,7 +204,7 @@ int main()
     twoPlayerText.setCharacterSize(Pong.getCharacterSize()*2/3);
     exitText.setCharacterSize(Pong.getCharacterSize()*2/3);
     Astrath.setString("By Astrath");
-    Pong.setString("Ocean Pong");
+    Pong.setString("Rain Pong");
     onePlayerText.setString("One Player");
     twoPlayerText.setString("Two Player");
     exitText.setString("Exit");
@@ -157,6 +245,8 @@ int main()
     dash.setFillColor(sf::Color(220,220,220,80));
     PausedOverlay.setSize({WindowWidth,WindowHeight});
     PausedOverlay.setFillColor(sf::Color(0,80,80,80));
+    sf::Text* hoveredButton = nullptr;
+    sf::Text* lastHoverButton = nullptr;
 
     sf::Clock clock;
     sf::Clock rest;
@@ -180,6 +270,13 @@ int main()
                     {
                         if(onePlayerText.getGlobalBounds().contains(mousePos))
                         {
+                            startsound.play();
+                            fadetoGame = true;
+                            fadetoMenu = false;
+                            if(gameplayMusic.getStatus() != sf::SoundSource::Status::Playing)
+                            {
+                                gameplayMusic.play();
+                            }
                             serveBall(left_paddle,right_paddle,ball,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                             rest.restart();
                             currentMode = GameMode::OnePlayer;
@@ -187,6 +284,13 @@ int main()
                         }
                         else if(twoPlayerText.getGlobalBounds().contains(mousePos))
                         {
+                            startsound.play();
+                            fadetoGame = true;
+                            fadetoMenu = false;
+                            if(gameplayMusic.getStatus() != sf::SoundSource::Status::Playing)
+                            {
+                                gameplayMusic.play();
+                            }
                             serveBall(left_paddle,right_paddle,ball,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                             rest.restart();
                             currentMode = GameMode::TwoPlayer;
@@ -194,6 +298,7 @@ int main()
                         }
                         else if(exitText.getGlobalBounds().contains(mousePos))
                         {
+                            clicksound.play();
                             window.close();
                         }
                         break;
@@ -202,10 +307,14 @@ int main()
                     {
                         if(Resume.getGlobalBounds().contains(mousePos))
                         {
+                            gameplayMusic.setVolume(gameVolume);
+                            clicksound.play();
                             currentState = GameState::Playing;
                         }
                         if(Restart.getGlobalBounds().contains(mousePos))
                         {
+                            gameplayMusic.setVolume(gameVolume);
+                            clicksound.play();
                             serveBall(left_paddle,right_paddle,ball,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                             rest.restart();
                             leftScore=0;rightScore=0;
@@ -213,12 +322,20 @@ int main()
                         }
                         if(MenuText.getGlobalBounds().contains(mousePos))
                         {
+                            fadetoMenu = true;
+                            fadetoGame = false;
+                            if(menuMusic.getStatus() != sf::SoundSource::Status::Playing)
+                            {
+                                menuMusic.play();
+                            }
+                            clicksound.play();
                             ball.setPosition({WindowWidth/2,WindowHeight/2});
                             leftScore=0;rightScore=0;
                             currentState = GameState::Menu;
                         }
                         if(exitText.getGlobalBounds().contains(mousePos))
                         {
+                            clicksound.play();
                             window.close();
                         }
                         break;
@@ -227,6 +344,7 @@ int main()
                     {
                         if(PlayAgain.getGlobalBounds().contains(mousePos))
                         {
+                            startsound.play();
                             leftScore = 0; rightScore=0;
                             serveBall(left_paddle,right_paddle,ball,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                             rest.restart();
@@ -234,10 +352,19 @@ int main()
                         } 
                         else if(MenuText.getGlobalBounds().contains(mousePos))
                         {
+                            fadetoMenu = true;
+                            fadetoGame = false;
+                            if(menuMusic.getStatus() != sf::SoundSource::Status::Playing)
+                            {
+                                menuMusic.play();
+                            }
+                            clicksound.play();
+                            leftScore = 0; rightScore=0;
                             currentState = GameState::Menu;
                         }
                         else if(exitText.getGlobalBounds().contains(mousePos))
                         {
+                            clicksound.play();
                             window.close();
                         }
                         break;
@@ -248,6 +375,42 @@ int main()
         }
         auto dt = clock.restart();
         float deltatime = dt.asSeconds();
+        const float fadeSpeed = 35.f; // volume per second
+
+        if(fadetoGame)
+        {
+            menuVolume -= fadeSpeed * deltatime;
+            gameVolume += fadeSpeed * deltatime;
+
+            menuVolume = std::max(0.f, menuVolume);
+            gameVolume = std::min(40.f, gameVolume);
+
+            menuMusic.setVolume(menuVolume);
+            gameplayMusic.setVolume(gameVolume);
+
+            if(menuVolume <= 0.f)
+            {
+                menuMusic.stop();
+                fadetoGame = false;
+            }
+        }
+        if(fadetoMenu)
+        {
+            menuVolume += fadeSpeed * deltatime;
+            gameVolume -= fadeSpeed * deltatime;
+
+            menuVolume = std::min(40.f, menuVolume);
+            gameVolume = std::max(0.f, gameVolume);
+
+            menuMusic.setVolume(menuVolume);
+            gameplayMusic.setVolume(gameVolume);
+
+            if(gameVolume <= 0.f)
+            {
+                gameplayMusic.stop();
+                fadetoMenu = false;
+            }
+        }
         switch(currentState)
         {
             //Menu
@@ -259,21 +422,30 @@ int main()
                 onePlayerText.setFillColor(sf::Color::White);
                 twoPlayerText.setFillColor(sf::Color::White);
                 exitText.setFillColor(sf::Color::White);
+                hoveredButton = nullptr;
                 if(onePlayerText.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton = &onePlayerText;
                     onePlayerText.setOutlineThickness(5);
                     onePlayerText.setFillColor(sf::Color::Yellow);
                 }
-                if(twoPlayerText.getGlobalBounds().contains(mousePos))
+                else if(twoPlayerText.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton = &twoPlayerText;
                     twoPlayerText.setOutlineThickness(5);
                     twoPlayerText.setFillColor(sf::Color::Yellow);
                 }
-                if(exitText.getGlobalBounds().contains(mousePos))
+                else if(exitText.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton = &exitText;
                     exitText.setFillColor(sf::Color::Yellow);
                     exitText.setOutlineThickness(5);
                 }
+                if(hoveredButton != nullptr && hoveredButton != lastHoverButton)
+                {
+                    hoversound.play();
+                }
+                lastHoverButton=hoveredButton;
                 window.clear(sf::Color(0,255,255));
                 window.draw(Pong);
                 window.draw(Astrath);
@@ -305,6 +477,7 @@ int main()
             {
                 if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
                 {
+                    gameplayMusic.setVolume(pauseVolume);
                     currentState = GameState::Paused;
                 }
                 if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))//inpute detection
@@ -361,18 +534,21 @@ int main()
                 // ball with lower boundary collison
                 if(ballpos.y>=WindowHeight-BallRadius)
                 {
+                    wallsound.play();
                     ball.setPosition({ballpos.x,WindowHeight-BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
                 //ball with upper boundary collison
                 if(ballpos.y<=BallRadius)
                 {
+                    wallsound.play();
                     ball.setPosition({ballpos.x,BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
                 //ball and left paddle collison(right edge)
                 if(ballpos.x<=leftpos.x+PaddleHalfWidth+BallRadius && prevballpos.x>leftpos.x+PaddleHalfWidth+BallRadius && ballpos.y>=leftpos.y-PaddleHalfHeight-BallRadius && ballpos.y<=leftpos.y+PaddleHalfHeight+BallRadius)
                 {
+                    paddlesound.play();
                     ball.setPosition({leftpos.x+PaddleHalfWidth+BallRadius,ballpos.y});
                     BallSpeed = std::min(1.06f*BallSpeed,maxBallspeed);
                     ballVelocityX = BallSpeed*std::cos(phileft);
@@ -381,18 +557,21 @@ int main()
                 //ball and left paddle collison(top edge)
                 if(ballpos.x<=leftpos.x+PaddleHalfWidth+BallRadius && ballpos.x>=leftpos.x-PaddleHalfWidth-BallRadius && ballpos.y>=leftpos.y-PaddleHalfHeight-BallRadius && prevballpos.y<leftpos.y-PaddleHalfHeight-BallRadius)
                 {
+                    paddlesound.play();
                     ball.setPosition({ballpos.x,leftpos.y-PaddleHalfHeight-BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
                 //ball and left paddle collison(bottom edge)
                 if(ballpos.x<leftpos.x+PaddleHalfWidth+BallRadius && ballpos.x>leftpos.x-PaddleHalfWidth-BallRadius && ballpos.y<=leftpos.y+PaddleHalfHeight+BallRadius && prevballpos.y>leftpos.y+PaddleHalfHeight+BallRadius)
                 {
+                    paddlesound.play();
                     ball.setPosition({ballpos.x,leftpos.y+PaddleHalfHeight+BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
                 //ball and right paddle collison(left edge)
                 if(prevballpos.x<rightpos.x-PaddleHalfWidth-BallRadius && ballpos.x>=rightpos.x-PaddleHalfWidth-BallRadius && ballpos.y>=rightpos.y-PaddleHalfHeight-BallRadius && ballpos.y<=rightpos.y+PaddleHalfHeight+BallRadius)
                 {
+                    paddlesound.play();
                     ball.setPosition({rightpos.x-PaddleHalfWidth-BallRadius,ballpos.y});
                     BallSpeed = std::min(1.06f*BallSpeed,maxBallspeed);
                     ballVelocityX = -BallSpeed*std::cos(phiright);
@@ -401,27 +580,31 @@ int main()
                 //ball and right paddle(top edge)
                 if(ballpos.x<=rightpos.x+PaddleHalfWidth+BallRadius && ballpos.x>=rightpos.x-PaddleHalfWidth-BallRadius && ballpos.y>=rightpos.y-PaddleHalfHeight-BallRadius && prevballpos.y<rightpos.y-PaddleHalfHeight-BallRadius)
                 {
+                    paddlesound.play();
                     ball.setPosition({ballpos.x,rightpos.y-PaddleHalfHeight-BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
                 //ball and right paddle collison(bottom edge)
                 if(ballpos.x<rightpos.x+PaddleHalfWidth+BallRadius && ballpos.x>rightpos.x-PaddleHalfWidth-BallRadius && ballpos.y<=rightpos.y+PaddleHalfHeight+BallRadius && prevballpos.y>rightpos.y+PaddleHalfHeight+BallRadius)
                 {
+                    paddlesound.play();
                     ball.setPosition({ballpos.x,rightpos.y+PaddleHalfHeight+BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
             
                 //score detection(left)
-                if(ballpos.x>=WindowWidth+BallRadius && leftScore < 7)
+                if(ballpos.x>=WindowWidth+BallRadius && leftScore < 5)
                 {
+                    scoringsound.play();  
                     leftScore++;
                     serveBall(left_paddle,right_paddle,ball, ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                     rest.restart();
                     currentState = GameState::Serve;
                 }
                 //score detection(right)
-                if(ballpos.x<=-BallRadius && rightScore < 7)
+                if(ballpos.x<=-BallRadius && rightScore < 5)
                 {
+                    scoringsound.play();  
                     rightScore++;
                     serveBall(left_paddle,right_paddle,ball, ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                     rest.restart();
@@ -440,14 +623,21 @@ int main()
                 window.draw(scoreText);
 
                 window.display();
-                if(leftScore >=7 || rightScore >= 7)
+                if(leftScore >=5 || rightScore >= 5)
                 {
-                    if(leftScore>=7)
+                    if(leftScore>=5)
                     {
+                        winsound.play();
                         WinnerText.setString("Left Wins!!");
                     }
                     else
                     {
+                        if(currentMode == GameMode::OnePlayer)
+                        {
+                            lost1sound.play();
+                        }
+                        else
+                        winsound.play();  
                         WinnerText.setString("Right Wins!!");
                     }
                     currentState = GameState::GameOver;
@@ -464,36 +654,46 @@ int main()
                 Restart.setOutlineThickness(0);
                 MenuText.setOutlineThickness(0);
                 exitText.setOutlineThickness(0);
+                hoveredButton = nullptr;
                 if(Resume.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton=&Resume;
                     Resume.setFillColor(sf::Color::Yellow);
                     Resume.setOutlineThickness(5);
                 }
-                if(Restart.getGlobalBounds().contains(mousePos))
+                else if(Restart.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton=&Restart;
                     Restart.setFillColor(sf::Color::Yellow);
                     Restart.setOutlineThickness(5);
                 }
-                if(MenuText.getGlobalBounds().contains(mousePos))
+                else if(MenuText.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton=&MenuText;
                     MenuText.setFillColor(sf::Color::Yellow);
                     MenuText.setOutlineThickness(5);
                 }
-                if(exitText.getGlobalBounds().contains(mousePos))
+                else if(exitText.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton=&exitText;
                     exitText.setFillColor(sf::Color::Yellow);
                     exitText.setOutlineThickness(5);
                 }
+                if(hoveredButton != nullptr && hoveredButton != lastHoverButton)
+                {
+                    hoversound.play();
+                }
+                lastHoverButton=hoveredButton;
+                window.draw(right_paddle);
+                window.draw(left_paddle);
+                window.draw(ball);
+                centerline(dash,WindowHeight,window,WindowWidth);
                 window.draw(PausedOverlay);
                 window.draw(PausedText);
                 window.draw(Resume);
                 window.draw(Restart);
                 window.draw(MenuText);
                 window.draw(exitText);
-                window.draw(right_paddle);
-                window.draw(left_paddle);
-                window.draw(ball);
-                centerline(dash,WindowHeight,window,WindowWidth);
                 window.display();
                 break;
             } 
@@ -505,22 +705,31 @@ int main()
                 PlayAgain.setOutlineThickness(0);
                 MenuText.setOutlineThickness(0);
                 exitText.setOutlineThickness(0);
+                hoveredButton = nullptr;
                 WinnerText.setPosition({(WindowWidth-WinnerText.getLocalBounds().size.x)/2,WindowHeight/7});
                 if(PlayAgain.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton = &PlayAgain;
                     PlayAgain.setOutlineThickness(5);
                     PlayAgain.setFillColor(sf::Color::Yellow);
                 }
-                if(MenuText.getGlobalBounds().contains(mousePos))
+                else if(MenuText.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton = &MenuText;
                     MenuText.setOutlineThickness(5);
                     MenuText.setFillColor(sf::Color::Yellow);
                 }
-                if(exitText.getGlobalBounds().contains(mousePos))
+                else if(exitText.getGlobalBounds().contains(mousePos))
                 {
+                    hoveredButton = &exitText;
                     exitText.setFillColor(sf::Color::Yellow);
                     exitText.setOutlineThickness(5);
                 }
+                if(hoveredButton != nullptr && hoveredButton != lastHoverButton)
+                {
+                    hoversound.play();
+                }
+                lastHoverButton=hoveredButton;
                 window.clear(sf::Color(0,220,200));
                 window.draw(WinnerText);
                 window.draw(PlayAgain);
