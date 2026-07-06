@@ -1,18 +1,26 @@
-# 🌊 Ocean Pong
+# 🌊 Rain Pong
 
 A modern Pong clone built in **C++** using **SFML**, featuring polished gameplay, multiple game modes, and a clean state-machine architecture.
 
 ---
 
-## ✨ Features
+## Features
 
-- 🎮 Single-player mode with AI opponent
-- 👥 Local two-player mode
-- ⏸️ Pause menu
-- 🎲 Randomized serves
-- 🏆 Game Over screen with winner announcement
-- 🖱️ Interactive menus with mouse hover effects
-- ⚙️ State-machine based game flow
+- 🎮 One Player (AI) and Two Player modes
+- ⏸️ Pause menu with Resume, Restart and Exit
+- 🏆 Win detection and Game Over screen
+- 🎵 Dynamic background music
+- 🔄 Smooth menu ↔ gameplay music transitions
+- 🔊 Interactive sound effects
+  - Paddle collisions
+  - Wall collisions
+  - Score splash
+  - Button hover & click
+  - Victory & defeat sounds
+- 🌧️ Rain-themed atmosphere
+- 🤖 AI opponent
+- ⚡ Increasing ball speed
+- 🎨 Pixel-art inspired UI
 
 ---
 
