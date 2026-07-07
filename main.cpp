@@ -19,6 +19,20 @@ enum class GameMode
     };
 GameState currentState = GameState::Menu;
 GameMode currentMode = GameMode::TwoPlayer;
+sf::RectangleShape dash;
+
+struct Raindrop
+{
+    sf::RectangleShape line;
+    float speed;
+};
+void drawRain(const std::vector<Raindrop>& rain,sf::RenderWindow& window)
+{
+    for (const auto& drop : rain)
+    {
+        window.draw(drop.line);
+    }
+}
 void centerline(sf::RectangleShape &dash,const float &Windowheight, sf::RenderWindow &window,const float &WindowWidth)
 {
     for(float i = dash.getSize().y/2; i<=Windowheight;i += 1.5*dash.getSize().y)
@@ -27,9 +41,9 @@ void centerline(sf::RectangleShape &dash,const float &Windowheight, sf::RenderWi
         window.draw(dash);
     }
 }
-void serveBall(sf::RectangleShape &left_paddle, sf::RectangleShape &right_paddle, sf::CircleShape &ball, float &ballVelocityX, float& ballVelocityY,const sf::Vector2f& Center, float &BallSpeed, std::mt19937& engine, std::uniform_int_distribution<int>& flip,std::uniform_real_distribution<float>&leftserve,std::uniform_real_distribution<float>&rightserve,float InitialBallspeed)
+void serveBall(sf::RectangleShape &left_paddle, sf::RectangleShape &right_paddle, sf::Sprite &bubble, float &ballVelocityX, float& ballVelocityY,const sf::Vector2f& Center, float &BallSpeed, std::mt19937& engine, std::uniform_int_distribution<int>& flip,std::uniform_real_distribution<float>&leftserve,std::uniform_real_distribution<float>&rightserve,float InitialBallspeed)
 {
-    ball.setPosition(Center);
+    bubble.setPosition(Center);
     const float PI = 3.14159265358979323846f;
     int Direction = flip(engine);
     float theta;
@@ -53,33 +67,67 @@ int main()
 {
     sf::RenderWindow window(sf::VideoMode({800,600}), "Pong");
     window.setVerticalSyncEnabled(true);
-
+    constexpr float PaddleWidth  = 10.f;
+    constexpr float PaddleHeight = 100.f;
+    sf::Texture ballTexture;
+    if(!ballTexture.loadFromFile("assets/Images/bubble2.png"))
+    {
+        std::cout << "Failed to load bubble image\n";
+    }
     sf::RectangleShape left_paddle;
     left_paddle.setSize({10.f,100.f});
     left_paddle.setOrigin({5.f,50.f});
     left_paddle.setPosition({25.f,300.f});
-    left_paddle.setFillColor(sf::Color::Black);
 
     sf::RectangleShape right_paddle;
     right_paddle.setSize({10.f,100.f});
     right_paddle.setOrigin({5.f,50.f});
     right_paddle.setPosition({775.f,300.f});
-    right_paddle.setFillColor(sf::Color::Black);
-
-    sf::RectangleShape dash;
+    sf::Sprite bubble(ballTexture);
+    left_paddle.setFillColor(sf::Color(210,220,235));
+    right_paddle.setFillColor(sf::Color(210,220,235));
+    left_paddle.setOutlineThickness(1.f);
+    left_paddle.setOutlineColor(sf::Color(120,135,155));
+    right_paddle.setOutlineThickness(1.f);
+    right_paddle.setOutlineColor(sf::Color(120,135,155));
+    bubble.setScale({18.f/ ballTexture.getSize().x,18.f/ballTexture.getSize().y});
+    bubble.setOrigin({bubble.getLocalBounds().size.x/2.f,bubble.getLocalBounds().size.y/2.f});
+    bubble.setPosition({400.f,300.f});
 
     sf::RectangleShape PausedOverlay;
+   
+    std::vector<Raindrop> rain;
 
-    sf::CircleShape ball;
-    ball.setFillColor(sf::Color::White);
-    ball.setRadius(7.f);
-    ball.setOrigin({7.f,7.f});
-    ball.setPosition({400.f,300.f});
+    sf::CircleShape trail1;
+    sf::CircleShape trail2;
+    sf::CircleShape trail3;
+    sf::CircleShape trail4;
+    sf::CircleShape trail5;
+    sf::CircleShape trail6;
+    trail1.setFillColor(sf::Color(120,180,255,220));
+    trail1.setRadius(6.5f);
+    trail1.setOrigin({6.5f,6.5f});
+    trail2.setFillColor(sf::Color(120,180,255,160));
+    trail2.setRadius(6.f);
+    trail2.setOrigin({6.f,6.f});
+    trail3.setFillColor(sf::Color(120,180,255,110));
+    trail3.setRadius(5.5f);
+    trail3.setOrigin({5.5f,5.5f});
+    trail4.setFillColor(sf::Color(120,180,255,70));
+    trail4.setRadius(5.f);
+    trail4.setOrigin({5.f,5.f});
+    trail5.setFillColor(sf::Color(120,180,255,40));
+    trail5.setRadius(4.5f);
+    trail5.setOrigin({4.5f,4.5f});
+    trail6.setFillColor(sf::Color(120,180,255,15));
+    trail6.setRadius(4.f);
+    trail6.setOrigin({4.f,4.f});
+    int framecount = 0;
 
     const float PI = 3.14159265358979323846f;
-    const float BallRadius = ball.getRadius();
-    const float PaddleHalfWidth = (left_paddle.getSize().x)/2.f;
-    const float PaddleHalfHeight = (left_paddle.getSize().y)/2.f;
+    const float BallRadius = 9.f;
+    const float PaddleHalfWidth = PaddleWidth/2.f;
+    const float PaddleHalfHeight = PaddleHeight/2.f;
     const float WindowHeight = static_cast<float>(window.getSize().y);
     const float WindowWidth = static_cast<float>(window.getSize().x);
     const sf::Vector2f Center = {WindowWidth/2.f,WindowHeight/2.f};
@@ -98,6 +146,34 @@ int main()
     std::uniform_real_distribution<float> rightserve(-60.f,60.f);
     std::uniform_real_distribution<float> leftserve(120.f,240.f);
     std::uniform_int_distribution<int> lose(0,1);
+    std::uniform_real_distribution<float> rainspeed(250.f,450.f);
+    std::uniform_real_distribution<float> rainx(0.f, WindowWidth);
+    std::uniform_real_distribution<float> rainy(-WindowHeight, 0.f);
+    std::uniform_real_distribution<float> rainwidth(1.f, 2.f);
+    std::uniform_real_distribution<float> rainlength(8.f, 20.f);
+    std::uniform_int_distribution<int> rainalpha(80,160);
+    std::uniform_real_distribution<float> newrainy(-40.f, 0.f);
+
+    float rainrotation = 10.f;
+    float wind = 2.f;
+    if(BallSpeed>400 && BallSpeed<500)
+    wind = 4.f;
+    else if(BallSpeed>500 && BallSpeed < 600)
+    wind = 8.f;
+    std::uniform_real_distribution<float> windvariation(-wind,wind);
+
+    for(int i =0; i<120;i++)
+    {
+        Raindrop drop;
+        drop.line.setSize({rainwidth(engine),rainlength(engine)});
+        drop.line.setOrigin({drop.line.getSize().x/2.f,0.f});
+        drop.line.setPosition({rainx(engine),rainy(engine)});
+        drop.line.setRotation(sf::degrees(rainrotation+windvariation(engine)));
+        drop.line.setFillColor(sf::Color(200,225,255,rainalpha(engine)));
+        drop.speed = rainspeed(engine);
+        rain.push_back(drop);
+    }
+
     bool wasHoveringOnePlayer = false;
     bool wasHoveringTwoPlayer = false;
     bool wasHoveringExit = false;
@@ -183,6 +259,14 @@ int main()
     menuMusic.play();
     bool fadetoGame = false;
     bool fadetoMenu = false;
+    sf::Texture backgroundTexture;
+    if(!backgroundTexture.loadFromFile("assets/Images/back.png"))
+    {
+        std::cout << "Failed to load background image\n";
+    }
+
+    sf::Sprite background(backgroundTexture);
+    background.setScale({WindowWidth / backgroundTexture.getSize().x,WindowHeight / backgroundTexture.getSize().y});
 
     sf::Font font;
     if(!font.openFromFile("assets/Font/PixeloidSans-Bold.ttf"))
@@ -240,9 +324,9 @@ int main()
     PausedText.setPosition({(WindowWidth-PausedText.getLocalBounds().size.x)/2,WindowHeight*1/14});
     Resume.setPosition({(WindowWidth-Resume.getLocalBounds().size.x)/2,WindowHeight*3/11.f});
     Restart.setPosition({(WindowWidth-Restart.getLocalBounds().size.x)/2,WindowHeight*6/13}); 
-    dash.setSize({PaddleHalfWidth,PaddleHalfHeight/2});
-    dash.setOrigin({PaddleHalfWidth/2,PaddleHalfHeight/4});
-    dash.setFillColor(sf::Color(220,220,220,80));
+    dash.setSize({6.f,24.f});
+    dash.setOrigin({3.f,12.f});
+    dash.setFillColor(sf::Color(220,220,220,100));
     PausedOverlay.setSize({WindowWidth,WindowHeight});
     PausedOverlay.setFillColor(sf::Color(0,80,80,80));
     sf::Text* hoveredButton = nullptr;
@@ -277,7 +361,7 @@ int main()
                             {
                                 gameplayMusic.play();
                             }
-                            serveBall(left_paddle,right_paddle,ball,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
+                            serveBall(left_paddle,right_paddle,bubble,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                             rest.restart();
                             currentMode = GameMode::OnePlayer;
                             currentState = GameState::Serve;
@@ -291,7 +375,7 @@ int main()
                             {
                                 gameplayMusic.play();
                             }
-                            serveBall(left_paddle,right_paddle,ball,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
+                            serveBall(left_paddle,right_paddle,bubble,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                             rest.restart();
                             currentMode = GameMode::TwoPlayer;
                             currentState = GameState::Serve;   
@@ -315,7 +399,7 @@ int main()
                         {
                             gameplayMusic.setVolume(gameVolume);
                             clicksound.play();
-                            serveBall(left_paddle,right_paddle,ball,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
+                            serveBall(left_paddle,right_paddle,bubble,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                             rest.restart();
                             leftScore=0;rightScore=0;
                             currentState=GameState::Serve;
@@ -329,7 +413,7 @@ int main()
                                 menuMusic.play();
                             }
                             clicksound.play();
-                            ball.setPosition({WindowWidth/2,WindowHeight/2});
+                            bubble.setPosition({WindowWidth/2,WindowHeight/2});
                             leftScore=0;rightScore=0;
                             currentState = GameState::Menu;
                         }
@@ -346,7 +430,7 @@ int main()
                         {
                             startsound.play();
                             leftScore = 0; rightScore=0;
-                            serveBall(left_paddle,right_paddle,ball,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
+                            serveBall(left_paddle,right_paddle,bubble,ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                             rest.restart();
                             currentState = GameState::Serve;  
                         } 
@@ -375,6 +459,20 @@ int main()
         }
         auto dt = clock.restart();
         float deltatime = dt.asSeconds();
+        bubble.rotate(sf::degrees(250.f * deltatime));
+        for (auto& drop : rain)
+        {
+            drop.line.move({0.f, drop.speed * deltatime});
+            if (drop.line.getPosition().y > WindowHeight)
+            {
+                drop.line.setSize({rainwidth(engine),rainlength(engine)});
+                drop.line.setOrigin({drop.line.getSize().x/2.f,0.f});
+                drop.line.setPosition({rainx(engine),newrainy(engine)});
+                drop.line.setRotation(sf::degrees(rainrotation+windvariation(engine)));
+                drop.line.setFillColor(sf::Color(200,225,255,rainalpha(engine)));
+                drop.speed = rainspeed(engine);
+            }
+        }   
         const float fadeSpeed = 35.f; // volume per second
 
         if(fadetoGame)
@@ -447,6 +545,8 @@ int main()
                 }
                 lastHoverButton=hoveredButton;
                 window.clear(sf::Color(0,255,255));
+                window.draw(background);
+                drawRain(rain,window);
                 window.draw(Pong);
                 window.draw(Astrath);
                 window.draw(onePlayerText);
@@ -463,12 +563,13 @@ int main()
                     currentState = GameState::Playing;
                 }
                 window.clear(sf::Color(0,255,255));
+                window.draw(background);
+                drawRain(rain,window);
                 centerline(dash,WindowHeight,window,WindowWidth);
                 window.draw(left_paddle);
                 window.draw(right_paddle);
-                window.draw(ball);
                 window.draw(scoreText);
-
+                window.draw(bubble);
                 window.display();
                 break;
             }
@@ -503,9 +604,20 @@ int main()
                         right_paddle.move({paddleVelocityX*deltatime,paddleVelocityY*deltatime});
                     }
                 }
-                auto prevballpos = ball.getPosition();
-                ball.move({ballVelocityX*deltatime,ballVelocityY*deltatime});//movement of ball every iteration
-                auto ballpos = ball.getPosition();
+                auto prevballpos = bubble.getPosition();
+                framecount++;
+                if(framecount>2)
+                {
+                    trail6.setPosition(trail5.getPosition());
+                    trail5.setPosition(trail4.getPosition());
+                    trail4.setPosition(trail3.getPosition());
+                    trail3.setPosition(trail2.getPosition());
+                    trail2.setPosition(trail1.getPosition());
+                    trail1.setPosition(prevballpos);
+                    framecount = 0;
+                }    
+                bubble.move({ballVelocityX*deltatime,ballVelocityY*deltatime});//movement of bubble every iteration
+                auto ballpos = bubble.getPosition();
                 auto leftpos = left_paddle.getPosition();
                 auto rightpos = right_paddle.getPosition();
                 float offshootleft = ballpos.y-leftpos.y;
@@ -531,64 +643,67 @@ int main()
                         right_paddle.move({paddleVelocityX*deltatime,paddleVelocityY*deltatime});
                     }
                 }
-                // ball with lower boundary collison
+
+                // bubble with lower boundary collison
                 if(ballpos.y>=WindowHeight-BallRadius)
                 {
                     wallsound.play();
-                    ball.setPosition({ballpos.x,WindowHeight-BallRadius});
+                    bubble.setPosition({ballpos.x,WindowHeight-BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
-                //ball with upper boundary collison
+                //bubble with upper boundary collison
                 if(ballpos.y<=BallRadius)
                 {
                     wallsound.play();
-                    ball.setPosition({ballpos.x,BallRadius});
+                    bubble.setPosition({ballpos.x,BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
-                //ball and left paddle collison(right edge)
+                //bubble and left paddle collison(right edge)
                 if(ballpos.x<=leftpos.x+PaddleHalfWidth+BallRadius && prevballpos.x>leftpos.x+PaddleHalfWidth+BallRadius && ballpos.y>=leftpos.y-PaddleHalfHeight-BallRadius && ballpos.y<=leftpos.y+PaddleHalfHeight+BallRadius)
                 {
                     paddlesound.play();
-                    ball.setPosition({leftpos.x+PaddleHalfWidth+BallRadius,ballpos.y});
+                    bubble.setPosition({leftpos.x+PaddleHalfWidth+BallRadius,ballpos.y});
                     BallSpeed = std::min(1.06f*BallSpeed,maxBallspeed);
                     ballVelocityX = BallSpeed*std::cos(phileft);
                     ballVelocityY = BallSpeed*std::sin(phileft);
+                    //left_paddle.setScale({PaddleWidth*1.1f/leftTexture.getSize().x,PaddleHeight*0.95f/leftTexture.getSize().y});
                 }
-                //ball and left paddle collison(top edge)
+                //bubble and left paddle collison(top edge)
                 if(ballpos.x<=leftpos.x+PaddleHalfWidth+BallRadius && ballpos.x>=leftpos.x-PaddleHalfWidth-BallRadius && ballpos.y>=leftpos.y-PaddleHalfHeight-BallRadius && prevballpos.y<leftpos.y-PaddleHalfHeight-BallRadius)
                 {
                     paddlesound.play();
-                    ball.setPosition({ballpos.x,leftpos.y-PaddleHalfHeight-BallRadius});
+                    bubble.setPosition({ballpos.x,leftpos.y-PaddleHalfHeight-BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
-                //ball and left paddle collison(bottom edge)
+                //bubble and left paddle collison(bottom edge)
                 if(ballpos.x<leftpos.x+PaddleHalfWidth+BallRadius && ballpos.x>leftpos.x-PaddleHalfWidth-BallRadius && ballpos.y<=leftpos.y+PaddleHalfHeight+BallRadius && prevballpos.y>leftpos.y+PaddleHalfHeight+BallRadius)
                 {
                     paddlesound.play();
-                    ball.setPosition({ballpos.x,leftpos.y+PaddleHalfHeight+BallRadius});
+                    bubble.setPosition({ballpos.x,leftpos.y+PaddleHalfHeight+BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
-                //ball and right paddle collison(left edge)
+                //bubble and right paddle collison(left edge)
                 if(prevballpos.x<rightpos.x-PaddleHalfWidth-BallRadius && ballpos.x>=rightpos.x-PaddleHalfWidth-BallRadius && ballpos.y>=rightpos.y-PaddleHalfHeight-BallRadius && ballpos.y<=rightpos.y+PaddleHalfHeight+BallRadius)
                 {
                     paddlesound.play();
-                    ball.setPosition({rightpos.x-PaddleHalfWidth-BallRadius,ballpos.y});
+                    bubble.setPosition({rightpos.x-PaddleHalfWidth-BallRadius,ballpos.y});
                     BallSpeed = std::min(1.06f*BallSpeed,maxBallspeed);
                     ballVelocityX = -BallSpeed*std::cos(phiright);
                     ballVelocityY = BallSpeed*std::sin(phiright);
+                    //right_paddle.setScale({PaddleWidth*1.1f/rightTexture.getSize().x,PaddleHeight*0.95f/rightTexture.getSize().y});
                 }
-                //ball and right paddle(top edge)
+                //bubble and right paddle(top edge)
                 if(ballpos.x<=rightpos.x+PaddleHalfWidth+BallRadius && ballpos.x>=rightpos.x-PaddleHalfWidth-BallRadius && ballpos.y>=rightpos.y-PaddleHalfHeight-BallRadius && prevballpos.y<rightpos.y-PaddleHalfHeight-BallRadius)
                 {
                     paddlesound.play();
-                    ball.setPosition({ballpos.x,rightpos.y-PaddleHalfHeight-BallRadius});
+                    bubble.setPosition({ballpos.x,rightpos.y-PaddleHalfHeight-BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
-                //ball and right paddle collison(bottom edge)
+                //bubble and right paddle collison(bottom edge)
                 if(ballpos.x<rightpos.x+PaddleHalfWidth+BallRadius && ballpos.x>rightpos.x-PaddleHalfWidth-BallRadius && ballpos.y<=rightpos.y+PaddleHalfHeight+BallRadius && prevballpos.y>rightpos.y+PaddleHalfHeight+BallRadius)
                 {
                     paddlesound.play();
-                    ball.setPosition({ballpos.x,rightpos.y+PaddleHalfHeight+BallRadius});
+                    bubble.setPosition({ballpos.x,rightpos.y+PaddleHalfHeight+BallRadius});
                     ballVelocityY = -ballVelocityY;
                 }
             
@@ -597,7 +712,7 @@ int main()
                 {
                     scoringsound.play();  
                     leftScore++;
-                    serveBall(left_paddle,right_paddle,ball, ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
+                    serveBall(left_paddle,right_paddle,bubble, ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                     rest.restart();
                     currentState = GameState::Serve;
                 }
@@ -606,7 +721,7 @@ int main()
                 {
                     scoringsound.play();  
                     rightScore++;
-                    serveBall(left_paddle,right_paddle,ball, ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
+                    serveBall(left_paddle,right_paddle,bubble, ballVelocityX, ballVelocityY, Center,BallSpeed,engine,flip,leftserve,rightserve,InitialBallspeed);
                     rest.restart();
                     currentState = GameState::Serve;
                 }
@@ -616,10 +731,18 @@ int main()
                 scoreText.setPosition({WindowWidth/2.f - scoreText.getLocalBounds().size.x/2.f,20.f});
             
                 window.clear(sf::Color(0,255,255));
+                window.draw(background);
+                drawRain(rain,window);
                 centerline(dash,WindowHeight,window,WindowWidth);
                 window.draw(left_paddle);
                 window.draw(right_paddle);
-                window.draw(ball);
+                window.draw(trail1);
+                window.draw(trail2);
+                window.draw(trail3);
+                window.draw(trail4);
+                window.draw(trail5);
+                window.draw(trail6);
+                window.draw(bubble);
                 window.draw(scoreText);
 
                 window.display();
@@ -684,9 +807,19 @@ int main()
                     hoversound.play();
                 }
                 lastHoverButton=hoveredButton;
+                window.clear(sf::Color(0,255,255));
+                window.draw(background);
+                drawRain(rain,window);
                 window.draw(right_paddle);
                 window.draw(left_paddle);
-                window.draw(ball);
+                window.draw(scoreText);
+                window.draw(trail1);
+                window.draw(trail2);
+                window.draw(trail3);
+                window.draw(trail4);
+                window.draw(trail5);
+                window.draw(trail6);
+                window.draw(bubble);
                 centerline(dash,WindowHeight,window,WindowWidth);
                 window.draw(PausedOverlay);
                 window.draw(PausedText);
@@ -731,6 +864,8 @@ int main()
                 }
                 lastHoverButton=hoveredButton;
                 window.clear(sf::Color(0,220,200));
+                window.draw(background);
+                drawRain(rain,window);
                 window.draw(WinnerText);
                 window.draw(PlayAgain);
                 window.draw(MenuText);
