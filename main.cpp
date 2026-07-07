@@ -26,6 +26,19 @@ struct Raindrop
     sf::RectangleShape line;
     float speed;
 };
+struct SplashParticle
+{
+    sf::CircleShape shape;
+    sf::Vector2f velocity;
+    float lifetime;
+};
+void splash(std::vector<SplashParticle> &SplashParticles, sf::RenderWindow &window)
+{
+    for (auto &p : SplashParticles)
+    {
+        window.draw(p.shape);
+    }
+}
 void drawRain(const std::vector<Raindrop>& rain,sf::RenderWindow& window)
 {
     for (const auto& drop : rain)
@@ -102,8 +115,6 @@ int main()
     sf::CircleShape trail2;
     sf::CircleShape trail3;
     sf::CircleShape trail4;
-    sf::CircleShape trail5;
-    sf::CircleShape trail6;
     trail1.setFillColor(sf::Color(120,180,255,220));
     trail1.setRadius(6.5f);
     trail1.setOrigin({6.5f,6.5f});
@@ -116,12 +127,6 @@ int main()
     trail4.setFillColor(sf::Color(120,180,255,70));
     trail4.setRadius(5.f);
     trail4.setOrigin({5.f,5.f});
-    trail5.setFillColor(sf::Color(120,180,255,40));
-    trail5.setRadius(4.5f);
-    trail5.setOrigin({4.5f,4.5f});
-    trail6.setFillColor(sf::Color(120,180,255,15));
-    trail6.setRadius(4.f);
-    trail6.setOrigin({4.f,4.f});
     int framecount = 0;
 
     const float PI = 3.14159265358979323846f;
@@ -153,6 +158,9 @@ int main()
     std::uniform_real_distribution<float> rainlength(8.f, 20.f);
     std::uniform_int_distribution<int> rainalpha(80,160);
     std::uniform_real_distribution<float> newrainy(-40.f, 0.f);
+    std::uniform_real_distribution<float> angle(0.f,360.f);
+    std::uniform_real_distribution<float> speed(80.f, 220.f);
+
 
     float rainrotation = 10.f;
     float wind = 2.f;
@@ -237,11 +245,11 @@ int main()
     paddlesound.setVolume(60);
     scoringsound.setVolume(55);
     startsound.setVolume(60);
-    winsound.setVolume(200);
-    lost1sound.setVolume(80);
+    winsound.setVolume(1000);
+    lost1sound.setVolume(120);
     sf::Music menuMusic;
     sf::Music gameplayMusic;
-    if(!menuMusic.openFromFile("assets/Music/menumusic.mp3"))
+    if(!menuMusic.openFromFile("assets/Music/gamemusic.mp3"))
     {
         std::cout << "Failed to load Menu Music";
     }
@@ -288,13 +296,14 @@ int main()
     twoPlayerText.setCharacterSize(Pong.getCharacterSize()*2/3);
     exitText.setCharacterSize(Pong.getCharacterSize()*2/3);
     Astrath.setString("By Astrath");
-    Pong.setString("Rain Pong");
+    Pong.setString("Rainy Pong");
     onePlayerText.setString("One Player");
     twoPlayerText.setString("Two Player");
     exitText.setString("Exit");
     Astrath.setFillColor(sf::Color(255,16,240));
     Pong.setOutlineThickness(7);
     Pong.setOutlineColor(sf::Color::Blue);
+    Pong.setFillColor(sf::Color(0,255,255));
     Pong.setPosition({(WindowWidth-Pong.getLocalBounds().size.x)/2,WindowHeight/14});
     Astrath.setPosition({(WindowWidth-Astrath.getLocalBounds().size.x)/2,WindowHeight*4/14});
     onePlayerText.setPosition({(WindowWidth-onePlayerText.getLocalBounds().size.x)/2.f,WindowHeight*6/14});
@@ -331,6 +340,7 @@ int main()
     PausedOverlay.setFillColor(sf::Color(0,80,80,80));
     sf::Text* hoveredButton = nullptr;
     sf::Text* lastHoverButton = nullptr;
+    std::vector<SplashParticle> splashParticles;
 
     sf::Clock clock;
     sf::Clock rest;
@@ -606,10 +616,8 @@ int main()
                 }
                 auto prevballpos = bubble.getPosition();
                 framecount++;
-                if(framecount>2)
+                if(framecount>1)
                 {
-                    trail6.setPosition(trail5.getPosition());
-                    trail5.setPosition(trail4.getPosition());
                     trail4.setPosition(trail3.getPosition());
                     trail3.setPosition(trail2.getPosition());
                     trail2.setPosition(trail1.getPosition());
@@ -630,16 +638,16 @@ int main()
                 {
                     if(ballVelocityX>0)
                     {
-                        if(ballpos.y>rightpos.y+5.f && rightpos.y<WindowHeight-PaddleHalfHeight)
+                        if(ballpos.y>rightpos.y+12.f && rightpos.y<WindowHeight-PaddleHalfHeight)
                         right_paddle.move({paddleVelocityX*deltatime,paddleVelocityY*deltatime});
-                        else if(ballpos.y<rightpos.y-5.f && rightpos.y>PaddleHalfHeight)
+                        else if(ballpos.y<rightpos.y-12.f && rightpos.y>PaddleHalfHeight)
                         right_paddle.move({paddleVelocityX*deltatime,-paddleVelocityY*deltatime});
                     }
                     else
                     {
-                        if(rightpos.y>(WindowHeight/2.f) +5.f && rightpos.y>PaddleHalfHeight)
+                        if(rightpos.y>(WindowHeight/2.f) +12.f && rightpos.y>PaddleHalfHeight)
                         right_paddle.move({paddleVelocityX*deltatime,-paddleVelocityY*deltatime});
-                        if(rightpos.y<(WindowHeight/2.f)-5.f && rightpos.y<WindowHeight-PaddleHalfHeight)
+                        if(rightpos.y<(WindowHeight/2.f)-12.f && rightpos.y<WindowHeight-PaddleHalfHeight)
                         right_paddle.move({paddleVelocityX*deltatime,paddleVelocityY*deltatime});
                     }
                 }
@@ -650,6 +658,23 @@ int main()
                     wallsound.play();
                     bubble.setPosition({ballpos.x,WindowHeight-BallRadius});
                     ballVelocityY = -ballVelocityY;
+                    for(int i=0;i<10;i++)
+                    {
+                        SplashParticle p;
+
+                        p.shape.setRadius(2.f);
+                        p.shape.setOrigin({2.f,2.f});
+                        p.shape.setFillColor(sf::Color(180,220,255));
+
+                        p.shape.setPosition(bubble.getPosition());
+
+                        p.velocity.x = std::cos(angle(engine)*PI/180.f)*speed(engine);
+                        p.velocity.y = std::sin(angle(engine)*PI/180.f)*speed(engine);
+
+                        p.lifetime = 0.25f;
+
+                        splashParticles.push_back(p);
+                    }
                 }
                 //bubble with upper boundary collison
                 if(ballpos.y<=BallRadius)
@@ -657,6 +682,23 @@ int main()
                     wallsound.play();
                     bubble.setPosition({ballpos.x,BallRadius});
                     ballVelocityY = -ballVelocityY;
+                    for(int i=0;i<10;i++)
+                    {
+                        SplashParticle p;
+
+                        p.shape.setRadius(2.f);
+                        p.shape.setOrigin({2.f,2.f});
+                        p.shape.setFillColor(sf::Color(180,220,255));
+
+                        p.shape.setPosition(bubble.getPosition());
+
+                        p.velocity.x = std::cos(angle(engine)*PI/180.f)*speed(engine);
+                        p.velocity.y = std::sin(angle(engine)*PI/180.f)*speed(engine);
+
+                        p.lifetime = 0.25f;
+
+                        splashParticles.push_back(p);
+                    }
                 }
                 //bubble and left paddle collison(right edge)
                 if(ballpos.x<=leftpos.x+PaddleHalfWidth+BallRadius && prevballpos.x>leftpos.x+PaddleHalfWidth+BallRadius && ballpos.y>=leftpos.y-PaddleHalfHeight-BallRadius && ballpos.y<=leftpos.y+PaddleHalfHeight+BallRadius)
@@ -666,7 +708,23 @@ int main()
                     BallSpeed = std::min(1.06f*BallSpeed,maxBallspeed);
                     ballVelocityX = BallSpeed*std::cos(phileft);
                     ballVelocityY = BallSpeed*std::sin(phileft);
-                    //left_paddle.setScale({PaddleWidth*1.1f/leftTexture.getSize().x,PaddleHeight*0.95f/leftTexture.getSize().y});
+                    for(int i=0;i<10;i++)
+                    {
+                        SplashParticle p;
+
+                        p.shape.setRadius(2.f);
+                        p.shape.setOrigin({2.f,2.f});
+                        p.shape.setFillColor(sf::Color(180,220,255));
+
+                        p.shape.setPosition(bubble.getPosition());
+
+                        p.velocity.x = std::cos(angle(engine)*PI/180.f)*speed(engine);
+                        p.velocity.y = std::sin(angle(engine)*PI/180.f)*speed(engine);
+
+                        p.lifetime = 0.25f;
+
+                        splashParticles.push_back(p);
+                    }
                 }
                 //bubble and left paddle collison(top edge)
                 if(ballpos.x<=leftpos.x+PaddleHalfWidth+BallRadius && ballpos.x>=leftpos.x-PaddleHalfWidth-BallRadius && ballpos.y>=leftpos.y-PaddleHalfHeight-BallRadius && prevballpos.y<leftpos.y-PaddleHalfHeight-BallRadius)
@@ -674,6 +732,23 @@ int main()
                     paddlesound.play();
                     bubble.setPosition({ballpos.x,leftpos.y-PaddleHalfHeight-BallRadius});
                     ballVelocityY = -ballVelocityY;
+                    for(int i=0;i<10;i++)
+                    {
+                        SplashParticle p;
+
+                        p.shape.setRadius(2.f);
+                        p.shape.setOrigin({2.f,2.f});
+                        p.shape.setFillColor(sf::Color(180,220,255));
+
+                        p.shape.setPosition(bubble.getPosition());
+
+                        p.velocity.x = std::cos(angle(engine)*PI/180.f)*speed(engine);
+                        p.velocity.y = std::sin(angle(engine)*PI/180.f)*speed(engine);
+
+                        p.lifetime = 0.25f;
+
+                        splashParticles.push_back(p);
+                    }
                 }
                 //bubble and left paddle collison(bottom edge)
                 if(ballpos.x<leftpos.x+PaddleHalfWidth+BallRadius && ballpos.x>leftpos.x-PaddleHalfWidth-BallRadius && ballpos.y<=leftpos.y+PaddleHalfHeight+BallRadius && prevballpos.y>leftpos.y+PaddleHalfHeight+BallRadius)
@@ -681,6 +756,23 @@ int main()
                     paddlesound.play();
                     bubble.setPosition({ballpos.x,leftpos.y+PaddleHalfHeight+BallRadius});
                     ballVelocityY = -ballVelocityY;
+                    for(int i=0;i<10;i++)
+                    {
+                        SplashParticle p;
+
+                        p.shape.setRadius(2.f);
+                        p.shape.setOrigin({2.f,2.f});
+                        p.shape.setFillColor(sf::Color(180,220,255));
+
+                        p.shape.setPosition(bubble.getPosition());
+
+                        p.velocity.x = std::cos(angle(engine)*PI/180.f)*speed(engine);
+                        p.velocity.y = std::sin(angle(engine)*PI/180.f)*speed(engine);
+
+                        p.lifetime = 0.25f;
+
+                        splashParticles.push_back(p);
+                    }
                 }
                 //bubble and right paddle collison(left edge)
                 if(prevballpos.x<rightpos.x-PaddleHalfWidth-BallRadius && ballpos.x>=rightpos.x-PaddleHalfWidth-BallRadius && ballpos.y>=rightpos.y-PaddleHalfHeight-BallRadius && ballpos.y<=rightpos.y+PaddleHalfHeight+BallRadius)
@@ -690,7 +782,23 @@ int main()
                     BallSpeed = std::min(1.06f*BallSpeed,maxBallspeed);
                     ballVelocityX = -BallSpeed*std::cos(phiright);
                     ballVelocityY = BallSpeed*std::sin(phiright);
-                    //right_paddle.setScale({PaddleWidth*1.1f/rightTexture.getSize().x,PaddleHeight*0.95f/rightTexture.getSize().y});
+                    for(int i=0;i<10;i++)
+                    {
+                        SplashParticle p;
+
+                        p.shape.setRadius(2.f);
+                        p.shape.setOrigin({2.f,2.f});
+                        p.shape.setFillColor(sf::Color(180,220,255));
+
+                        p.shape.setPosition(bubble.getPosition());
+
+                        p.velocity.x = std::cos(angle(engine)*PI/180.f)*speed(engine);
+                        p.velocity.y = std::sin(angle(engine)*PI/180.f)*speed(engine);
+
+                        p.lifetime = 0.25f;
+
+                        splashParticles.push_back(p);
+                    }
                 }
                 //bubble and right paddle(top edge)
                 if(ballpos.x<=rightpos.x+PaddleHalfWidth+BallRadius && ballpos.x>=rightpos.x-PaddleHalfWidth-BallRadius && ballpos.y>=rightpos.y-PaddleHalfHeight-BallRadius && prevballpos.y<rightpos.y-PaddleHalfHeight-BallRadius)
@@ -698,6 +806,23 @@ int main()
                     paddlesound.play();
                     bubble.setPosition({ballpos.x,rightpos.y-PaddleHalfHeight-BallRadius});
                     ballVelocityY = -ballVelocityY;
+                    for(int i=0;i<10;i++)
+                    {
+                        SplashParticle p;
+
+                        p.shape.setRadius(2.f);
+                        p.shape.setOrigin({2.f,2.f});
+                        p.shape.setFillColor(sf::Color(180,220,255));
+
+                        p.shape.setPosition(bubble.getPosition());
+
+                        p.velocity.x = std::cos(angle(engine)*PI/180.f)*speed(engine);
+                        p.velocity.y = std::sin(angle(engine)*PI/180.f)*speed(engine);
+
+                        p.lifetime = 0.25f;
+
+                        splashParticles.push_back(p);
+                    }
                 }
                 //bubble and right paddle collison(bottom edge)
                 if(ballpos.x<rightpos.x+PaddleHalfWidth+BallRadius && ballpos.x>rightpos.x-PaddleHalfWidth-BallRadius && ballpos.y<=rightpos.y+PaddleHalfHeight+BallRadius && prevballpos.y>rightpos.y+PaddleHalfHeight+BallRadius)
@@ -705,8 +830,36 @@ int main()
                     paddlesound.play();
                     bubble.setPosition({ballpos.x,rightpos.y+PaddleHalfHeight+BallRadius});
                     ballVelocityY = -ballVelocityY;
+                    for(int i=0;i<10;i++)
+                    {
+                        SplashParticle p;
+
+                        p.shape.setRadius(2.f);
+                        p.shape.setOrigin({2.f,2.f});
+                        p.shape.setFillColor(sf::Color(180,220,255));
+
+                        p.shape.setPosition(bubble.getPosition());
+
+                        p.velocity.x = std::cos(angle(engine)*PI/180.f)*speed(engine);
+                        p.velocity.y = std::sin(angle(engine)*PI/180.f)*speed(engine);
+
+                        p.lifetime = 0.25f;
+
+                        splashParticles.push_back(p);
+                    }
                 }
-            
+                for(auto &p : splashParticles)
+                {
+                    p.shape.move(p.velocity*deltatime);
+
+                    p.lifetime -= deltatime;
+                }
+                splashParticles.erase(std::remove_if(splashParticles.begin(),splashParticles.end(),
+                    [](const SplashParticle& p)
+                    {
+                        return p.lifetime <= 0.f;
+                    }),
+                splashParticles.end());
                 //score detection(left)
                 if(ballpos.x>=WindowWidth+BallRadius && leftScore < 5)
                 {
@@ -736,12 +889,11 @@ int main()
                 centerline(dash,WindowHeight,window,WindowWidth);
                 window.draw(left_paddle);
                 window.draw(right_paddle);
+                splash(splashParticles,window);
                 window.draw(trail1);
                 window.draw(trail2);
                 window.draw(trail3);
                 window.draw(trail4);
-                window.draw(trail5);
-                window.draw(trail6);
                 window.draw(bubble);
                 window.draw(scoreText);
 
@@ -817,8 +969,7 @@ int main()
                 window.draw(trail2);
                 window.draw(trail3);
                 window.draw(trail4);
-                window.draw(trail5);
-                window.draw(trail6);
+                splash(splashParticles,window);
                 window.draw(bubble);
                 centerline(dash,WindowHeight,window,WindowWidth);
                 window.draw(PausedOverlay);
